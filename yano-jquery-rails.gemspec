@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "http://rubygems.org/gems/yano-jquery-rails"
   spec.license       = "MIT"
 
-  spec.required_ruby_version = ">= 1.9.3"
+  spec.required_ruby_version     = ">= 1.9.3"
   spec.required_rubygems_version = ">= 1.3.6"
 
   spec.add_dependency "railties", ">= 4.2.0"
