@@ -24,8 +24,8 @@ namespace :update do
           puts `curl -o ./javascripts/jquery/#{filename}#{type}.js http://code.jquery.com/jquery-#{version}#{type}.js`
 
           puts "Downloading #{filename}#{type}.map"
-          puts "curl -o ./source_maps/jquery/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map"
-          puts `curl -o ./source_maps/jquery/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map`
+          puts "curl -o ./source_maps/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map"
+          puts `curl -o ./source_maps/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map`
         end
       end
     end
