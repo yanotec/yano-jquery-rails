@@ -1,87 +1,102 @@
 require "bundler/gem_tasks"
 task :default => :spec
 
-require 'bundler'
-require 'rake/testtask'
-Bundler::GemHelper.install_tasks
+# path to your application root.
+GEM_ROOT = Pathname.new File.expand_path('../',  __FILE__)
+ASSETS_PATH = Pathname.new File.expand_path('vendor/assets/',  GEM_ROOT)
 
-task default: :test
+desc "Update all assets"
+task :update => %w(update:jquery update:jquery_ui update:jquery_ujs)
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << 'lib'
-  t.pattern = 'test/**/*_test.rb'
-  t.warning = true
-  t.verbose = true
-end
+namespace :update do
+  desc "Update jquery assets"
+  task :jquery do
+    configs = {
+      'jquery' => Yano::Jquery::Rails::JQUERY_VERSION,
+      'jquery2' => Yano::Jquery::Rails::JQUERY_2_VERSION
+    }
 
-# Check if versions are correct between VERSION constants and .js files
-#
-task :release => [:guard_version]
+    Dir.chdir ASSETS_PATH do
+      configs.each do |filename, version|
+        ['', '.min'].each do |type|
+          puts "Downloading #{filename}#{type}.js"
+          puts "curl -o ./javascripts/jquery/#{filename}#{type}.js http://code.jquery.com/jquery-#{version}#{type}.js"
+          puts `curl -o ./javascripts/jquery/#{filename}#{type}.js http://code.jquery.com/jquery-#{version}#{type}.js`
 
-task :guard_version do
-  def check_version(file, pattern, constant)
-    body = File.read("vendor/assets/javascripts/#{file}")
-    match = body.match(pattern) or abort "Version check failed: no pattern matched in #{file}"
-    file_version = match[1]
-    constant_version = Jquery::Rails.const_get(constant)
-
-    unless constant_version == file_version
-      abort "Jquery::Rails::#{constant} was #{constant_version} but it should be #{file_version}"
+          puts "Downloading #{filename}#{type}.map"
+          puts "curl -o ./source_maps/jquery/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map"
+          puts `curl -o ./source_maps/jquery/#{filename}#{type}.map http://code.jquery.com/jquery-#{version}#{type}.map`
+        end
+      end
     end
+
+    puts "\e[32mDone!\e[0m"
   end
 
-  check_version('jquery.js', /jQuery JavaScript Library v([\S]+)/, 'JQUERY_VERSION')
-  check_version('jquery2.js', /jQuery JavaScript Library v([\S]+)/, 'JQUERY_2_VERSION')
-end
+  desc "Update jQuery UI assets"
+  task :jquery_ui do
+    version = Yano::Jquery::Rails::JQUERY_UI_VERSION
 
-desc "Update jQuery versions"
-task :update_jquery do
-  def download_jquery(filename, version)
-    suffix = "-#{version}"
+    Dir.chdir ASSETS_PATH do
+      puts `pwd`
+      puts "Cleaning temp folder"
+      ["rm -rf ", "mkdir -p "].each do |cmd|
+        puts "#{cmd} ./tmp ./stylesheets/jquery/ui ./javascripts/jquery/ui ./images/jquery/ui"
+        puts `#{cmd} ./tmp ./stylesheets/jquery/ui ./javascripts/jquery/ui ./images/jquery/ui`
+      end
+      puts "Downloading jquery-ui.zip"
+      puts "wget -O ./tmp/jquery-ui.zip http://jqueryui.com/resources/download/jquery-ui-#{version}.zip"
+      puts `wget -O ./tmp/jquery-ui.zip http://jqueryui.com/resources/download/jquery-ui-#{version}.zip`
+      puts "Unziping jquery-ui.zip"
+      puts `unzip -d ./tmp ./tmp/jquery-ui.zip`
+      puts "Copy js assets"
+      puts "cp ./tmp/jquery-ui-#{version}/jquery-ui*.js javascripts/jquery/ui/"
+      puts `cp ./tmp/jquery-ui-#{version}/jquery-ui*.js javascripts/jquery/ui/`
+      puts "Copy images assets"
+      image_paths = Dir["./tmp/jquery-ui-#{version}/images/*"]
+      image_names = image_paths.map {|path| File.basename path }
 
-    puts "Downloading #{filename}.js"
-    puts `curl -o vendor/assets/javascripts/jquery/#{filename}.js http://code.jquery.com/jquery#{suffix}.js`
-    puts "Downloading #{filename}.min.js"
-    puts `curl -o vendor/assets/javascripts/jquery/#{filename}.min.js http://code.jquery.com/jquery#{suffix}.min.js`
-    puts "Downloading #{filename}.min.map"
-    puts `curl -o vendor/assets/javascripts/jquery/#{filename}.min.map http://code.jquery.com/jquery#{suffix}.min.map`
+      image_paths.each do |image_path|
+        filename = File.basename image_path
+
+        puts "cp #{image_path} ./images/jquery/ui/#{filename}"
+        puts `cp #{image_path} ./images/jquery/ui/#{filename}`
+      end
+
+      puts "Copy css assets"
+      Dir["./tmp/jquery-ui-#{version}/jquery-ui*.css"].each do |file_path|
+        filename = File.basename file_path
+
+        if filename =~ /sctructure/
+          puts "cp #{file_path} ./stylesheets/jquery/ui/#{filename}"
+          puts `cp #{file_path} ./stylesheets/jquery/ui/#{filename}`
+        else
+          File.open(file_path, 'r') do |file|
+            File.open("./stylesheets/jquery/ui/#{filename}.erb", 'w') do |new_file|
+              while (line = file.gets)
+                if line =~ /url/i
+                  image_names.each do |image|
+                    line = line.gsub("url(\"images/#{image}\")", "url(\"<%= assets_path 'jquery/ui/#{image}' %>\")")
+                  end
+                end
+
+                new_file.puts line
+              end
+            end
+          end
+        end
+      end
+
+      puts `rm -rf ./tmp`
+    end
+
+    puts "\e[32mDone!\e[0m"
   end
 
-  download_jquery('jquery', Yano::Jquery::Rails::JQUERY_VERSION)
-  download_jquery('jquery2', Yano::Jquery::Rails::JQUERY_2_VERSION)
-  puts "\e[32mDone!\e[0m"
-end
-
-desc "Update jQuery UI versions"
-task :update_jquery_ui do
-
-  JS_COMPONENTS.each do |name, component|
-    puts "Downloading jquery-ui/#{name}.js"
-    puts `curl -o vendor/assets/javascripts/jquery/ui/#{name}.js https://raw.githubusercontent.com/jquery/jquery-ui/#{Yano::Jquery::Rails::JQUERY_UI_VERSION}/ui/#{component}.js`
+  desc "Update jQuery UJS assets"
+  task :jquery_ujs do
+    puts "Downloading jquery_ujs.js"
+    puts `curl -o vendor/assets/javascripts/jquery/jquery_ujs.js https://raw.githubusercontent.com/rails/jquery-ujs/v#{Yano::Jquery::Rails::JQUERY_UJS_VERSION}/src/rails.js`
+    puts "\e[32mDone!\e[0m"
   end
-
-  puts "echo '/*' > vendor/assets/javascripts/jquery/jquery-ui.js"
-  JS_COMPONENTS.each do |name, _|
-    puts "echo ' * require ./ui/#{name}' >> vendor/assets/javascripts/jquery/jquery-ui.js"
-  end
-
-  puts "echo ' */' >> vendor/assets/javascripts/jquery/jquery-ui.js"
-
-  puts "Downloading jquery-ui.min.js"
-  puts `curl -o vendor/assets/javascripts/jquery/jquery-ui.min.js http://code.jquery.com/jquery#{Yano::Jquery::Rails::JQUERY_UI_VERSION}.min.js`
-
-
-  CSS_COMPONENTS.each do |component|
-    puts "Downloading jquery-ui/#{component}.css"
-    puts `curl -o vendor/assets/stylesheets/jquery/ui/#{component}.css https://raw.githubusercontent.com/jquery/jquery-ui/#{Yano::Jquery::Rails::JQUERY_UI_VERSION}/themes/base/#{component}.css`
-  end
-
-  puts "\e[32mDone!\e[0m"
-end
-
-desc "Update jQuery UJS version"
-task :update_jquery_ujs do
-  puts "Downloading jquery_ujs.js"
-  puts `curl -o vendor/assets/javascripts/jquery/jquery_ujs.js https://raw.githubusercontent.com/rails/jquery-ujs/v#{Yano::Jquery::Rails::JQUERY_UJS_VERSION}/src/rails.js`
-  puts "\e[32mDone!\e[0m"
 end
