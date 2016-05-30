@@ -76,7 +76,7 @@ namespace :update do
               while (line = file.gets)
                 if line =~ /url/i
                   image_names.each do |image|
-                    line = line.gsub("url(\"images/#{image}\")", "url(\"<%= assets_path 'jquery/ui/#{image}' %>\")")
+                    line = line.gsub("url(\"images/#{image}\")", "url(\"<%= asset_path 'jquery/ui/#{image}' %>\")")
                   end
                 end
 
