@@ -6,14 +6,28 @@ GEM_ROOT = Pathname.new File.expand_path('../',  __FILE__)
 ASSETS_PATH = Pathname.new File.expand_path('vendor/assets/',  GEM_ROOT)
 
 desc "Update all assets"
-task :update => %w(update:jquery update:jquery_ui update:jquery_ujs)
+task :update do
+  Dir.chdir ASSETS_PATH do
+    puts "Cleaning temp folder"
+    ["rm -rf ", "mkdir -p "].each do |cmd|
+      puts "#{cmd} ./tmp ./stylesheets/jquery ./javascripts/jquery ./images/jquery"
+      puts `#{cmd} ./tmp ./stylesheets/jquery ./javascripts/jquery ./images/jquery`
+    end
+
+    puts "rm -f ./source_maps/*.map"
+    puts `rm -f ./source_maps/*.map`
+  end
+
+  %w(update:jquery update:jquery_ui update:jquery_ujs).each do |taskename|
+    Rake::Task[taskename].invoke
+  end
+end
 
 namespace :update do
   desc "Update jquery assets"
   task :jquery do
     configs = {
       'jquery' => Yano::Jquery::Rails::JQUERY_VERSION,
-      'jquery2' => Yano::Jquery::Rails::JQUERY_2_VERSION
     }
 
     Dir.chdir ASSETS_PATH do
