@@ -28,6 +28,8 @@ namespace :update do
   task :jquery do
     configs = {
       'jquery' => Yano::Jquery::Rails::JQUERY_VERSION,
+      'jquery2' => Yano::Jquery::Rails::JQUERY_2_VERSION,
+      'jquery3' => Yano::Jquery::Rails::JQUERY_3_VERSION
     }
 
     Dir.chdir ASSETS_PATH do
